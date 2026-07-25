@@ -1,0 +1,17 @@
+{
+  "cloudFunctions": {
+    "nodejs": {
+      "includeFiles": ["lib/", "data/"],
+      "maxDuration": 120
+    }
+  },
+  "schedules": [
+    {
+      "name": "daily-news-scrape",
+      "cron": "0 8 * * *",
+      "path": "/api/cron/scrape",
+      "method": "POST",
+      "timezone": "Asia/Shanghai"
+    }
+  ]
+}

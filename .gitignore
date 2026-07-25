@@ -1,0 +1,26 @@
+# ===== Dependencies（依赖可凭 package-lock.json 重建，不入库）=====
+node_modules/
+
+# ===== Build output =====
+# dist/ 是生成器中间产物；线上文件已由 scripts/publish.cjs 同步到仓库根目录
+# （index.html / assets/ / article/ / category/ 等），故 dist 无需提交。
+dist/
+
+# ===== Environment / secrets（环境变量与密钥，切勿入库）=====
+.env
+.env.*
+*.local
+
+# ===== Logs =====
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===== OS / editor junk =====
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
