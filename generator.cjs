@@ -123,6 +123,36 @@ function shell(opts) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* 域名守卫（反镜像/反代/反内嵌）：仅对实时反代与保留脚本的克隆有效；
+   对"整站离线克隆并自存、且剥除脚本"的镜像，前端无法根治，需走源站防抓+下架。 */
+(function () {
+  try {
+    var d = ["tencent", "press"].join(".");            // 轻度拆分，防一行正则剥除
+    var h = (location.hostname || "").toLowerCase();
+    var ok = h === d || h === "www." + d ||
+      h === "localhost" || h === "127.0.0.1" || h === "[::1]" ||
+      /\.edgeone\.app$/.test(h) || /\.magents\.site$/.test(h);
+    if (ok) return;
+    var dest = "https://" + d + (location.pathname || "/") + (location.search || "") + (location.hash || "");
+    // 1) 首选：直接把地址栏带回官方域名（对实时反代/访客输错域名有效）
+    try { window.top.location.replace(dest); } catch (e) { location.replace(dest); }
+    // 2) 降级：若跳转被 CSP/sandbox 拦截，则把镜像页篡改为"官方跳转提示"（反制保留脚本的懒惰克隆）
+    setTimeout(function () {
+      try {
+        document.documentElement.innerHTML =
+          '<head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=' + dest + '">' +
+          '<title>正在跳转到官方网站…</title></head>' +
+          '<body style="font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:64px 20px;color:#333">' +
+          '<h2 style="color:#E55200">本页面为未经授权的镜像</h2>' +
+          '<p>官方网站唯一地址：</p>' +
+          '<p style="font-size:18px"><a style="color:#FF6A00" href="' + dest + '">' + dest + '</a></p>' +
+          '</body>';
+      } catch (e) {}
+    }, 1000);
+  } catch (e) {}
+})();
+</script>
 ${metaTags(opts)}
 <link rel="icon" type="image/svg+xml" href="${opts.assetPrefix}assets/img/logo.svg">
 <link rel="apple-touch-icon" href="${opts.assetPrefix}assets/img/logo.svg">
