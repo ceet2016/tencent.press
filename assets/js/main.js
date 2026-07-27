@@ -165,10 +165,7 @@
     }, { passive: true });
   }
 
-  /* ---- 移动端导航开关 ---- */
-  var toggle = document.querySelector(".nav-toggle");
-  var nav = document.querySelector(".nav");
-  if (toggle && nav) toggle.addEventListener("click", function () { nav.classList.toggle("open"); });
+  /* ---- 移动端导航开关由下方独立 IIFE 统一处理（避免重复绑定导致 toggle 互相抵消） ---- */
 
   /* ---- 实时数据：拉取 /api/articles，使定时抓取结果即时体现 ---- */
   function refreshFromApi() {
