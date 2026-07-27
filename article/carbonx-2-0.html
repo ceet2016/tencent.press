@@ -8,26 +8,30 @@
    对"整站离线克隆并自存、且剥除脚本"的镜像，前端无法根治，需走源站防抓+下架。 */
 (function () {
   try {
-    var d = ["tencent", "press"].join(".");            // 轻度拆分，防一行正则剥除
+    var d = ["tencent", "press"].join(".");
     var h = (location.hostname || "").toLowerCase();
-    var ok = h === d || h === "www." + d ||
-      h === "localhost" || h === "127.0.0.1" || h === "[::1]" ||
-      /.edgeone.app$/.test(h) || /.magents.site$/.test(h);
+    // 本地 / 内网 / 开发预览 一律放行，避免干扰本地预览与调试
+    var local = h === "localhost" || h === "127.0.0.1" || h === "[::1]" ||
+      h.indexOf("localhost") > -1 || h.indexOf(".local") > -1 ||
+      /^192\.168\./.test(h) || /^10\./.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+      (location.port && location.port !== "");
+    var ok = h === d || h === "www." + d || local ||
+      /\.edgeone\.app$/.test(h) || /\.magents\.site$/.test(h);
     if (ok) return;
     var dest = "https://" + d + (location.pathname || "/") + (location.search || "") + (location.hash || "");
-    // 1) 首选：直接把地址栏带回官方域名（对实时反代/访客输错域名有效）
-    try { window.top.location.replace(dest); } catch (e) { location.replace(dest); }
-    // 2) 降级：若跳转被 CSP/sandbox 拦截，则把镜像页篡改为"官方跳转提示"（反制保留脚本的懒惰克隆）
+    // 1) 首选：把地址栏带回官方域名
+    try { if (window.top && window.top !== window) window.top.location.replace(dest); else location.replace(dest); } catch (e) { location.replace(dest); }
+    // 2) 降级：仅注入一个提示遮罩，绝不整页重写，避免脚本源码泄漏
     setTimeout(function () {
       try {
-        document.documentElement.innerHTML =
-          '<head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=' + dest + '">' +
-          '<title>正在跳转到官方网站…</title></head>' +
-          '<body style="font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:64px 20px;color:#333">' +
-          '<h2 style="color:#E55200">本页面为未经授权的镜像</h2>' +
-          '<p>官方网站唯一地址：</p>' +
-          '<p style="font-size:18px"><a style="color:#FF6A00" href="' + dest + '">' + dest + '</a></p>' +
-          '</body>';
+        if (document.getElementById("mirror-notice")) return;
+        var box = document.createElement("div");
+        box.id = "mirror-notice";
+        box.setAttribute("style", "position:fixed;inset:0;z-index:9999;background:#fff;color:#333;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:64px 20px;display:flex;flex-direction:column;justify-content:center;gap:12px");
+        box.innerHTML = '<h2 style="color:#E55200;margin:0">本页面为未经授权的镜像</h2>' +
+          '<p style="margin:0">官方网站唯一地址：</p>' +
+          '<p style="margin:0;font-size:18px"><a style="color:#FF6A00" href="' + dest + '">' + dest + '</a></p>';
+        (document.body || document.documentElement).appendChild(box);
       } catch (e) {}
     }, 1000);
   } catch (e) {}
