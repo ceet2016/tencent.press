@@ -24,3 +24,6 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+
+# ===== EdgeOne CLI state（本地项目状态，勿入库）=====
+.edgeone/
