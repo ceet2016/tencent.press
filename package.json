@@ -1,0 +1,20 @@
+{
+  "name": "tencent-press",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Tencent观象台 — 腾讯资讯与动态聚合观察平台（静态生成 + EdgeOne Makers Blob 存储 + 定时抓取）",
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "scripts": {
+    "build": "node generator.cjs && node scripts/publish.cjs",
+    "scrape": "node scripts/fetch-news.mjs",
+    "seed": "node scripts/seed-blob.mjs",
+    "sync": "node scripts/sync-blob.mjs",
+    "deploy": "node scripts/sync-blob.mjs && node generator.cjs && edgeone makers deploy"
+  },
+  "dependencies": {
+    "@edgeone/pages-blob": "^0.0.14"
+  }
+}
