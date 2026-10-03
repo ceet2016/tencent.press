@@ -181,7 +181,11 @@
   function renderHero() {
     if (!heroLead && !heroSide) return;      // 非首页（无 hero 区块）直接跳过
     if (!ARTICLES || !ARTICLES.length) return;
-    var sorted = ARTICLES.slice().sort(function (a, b) { return (a.date < b.date) ? 1 : -1; });
+    // 头条只从「有封面图」的文章里选最新，避免无封面的 PDF/IR 报表占位稿顶到视觉头条
+    // （无封面稿仍保留在信息流与热榜中，仅不进入 hero 视觉区）
+    var presentable = ARTICLES.filter(function (a) { return a.coverImage; });
+    var pool = presentable.length ? presentable : ARTICLES;
+    var sorted = pool.slice().sort(function (a, b) { return (a.date < b.date) ? 1 : -1; });
     var f = sorted[0];
     if (!f) return;
 
