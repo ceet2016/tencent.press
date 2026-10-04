@@ -221,6 +221,12 @@ function cardHTML(a, pagePrefix) {
     </div></a>`;
 }
 
+// 静态页首屏占位：与 assets/js/main.js 的骨架完全一致，使首屏即显示「加载中」，
+// 避免构建期基线卡片先被浏览器绘制、再被 /api/articles 实时数据替换而产生的闪现/刷新。
+function feedSkeleton() {
+  return `<div class="empty" style="grid-column:1/-1"><div class="big">⏳</div>正在加载最新资讯…</div>`;
+}
+
 /* ---------- 侧栏模块（热榜 / 分类导航） ---------- */
 function hotPanel(list, pagePrefix) {
   const items = list
@@ -279,8 +285,8 @@ function buildIndex() {
   const main = `<section class="container main-grid">
     <div class="col-main">
       <div class="filter-row" id="filter-chips">${chips}</div>
-      <div class="search-meta" id="search-meta">共 ${sorted.length} 条资讯</div>
-      <div class="feed" id="feed">${sorted.slice(0, 6).map((a) => cardHTML(a, "")).join("")}</div>
+      <div class="search-meta" id="search-meta">正在加载最新资讯…</div>
+      <div class="feed" id="feed">${feedSkeleton()}</div>
       <div class="feed-sentinel" id="feed-sentinel"></div>
     </div>
     <aside class="col-side">
@@ -314,8 +320,8 @@ function buildCategories() {
   <div class="col-main">
     <div class="cat-hero"><h1>${c.label}</h1><p>${c.desc}</p></div>
     <div class="filter-row" id="filter-chips">${chips}</div>
-    <div class="search-meta" id="search-meta">「${c.label}」分类下共 ${list.length} 条资讯</div>
-    <div class="feed" id="feed">${list.slice(0, 6).map((a) => cardHTML(a, "../")).join("")}</div>
+    <div class="search-meta" id="search-meta">正在加载最新资讯…</div>
+    <div class="feed" id="feed">${feedSkeleton("../")}</div>
     <div class="feed-sentinel" id="feed-sentinel"></div>
   </div>
   <aside class="col-side">
