@@ -38,8 +38,16 @@ export async function onRequest() {
     }
     const fresh = await scrape(resolveSources());
     let { merged, added } = mergeArticles(data.articles, fresh);
-    // 注意：不再回落内置基线。站点内容以 Blob 中的定时抓取结果为准；
-    // 若本次抓取为空，则保持空（/api/articles 返回空，前端显示骨架/空状态），不回显旧数据。
+    // 自愈：若合并后仍为空（Blob 被清空且本次抓取失败），回落内置基线，避免写入空数据导致站点空白
+    if (!merged.length) {
+      try {
+        const mod = await import("../../../data/articles.json", { with: { type: "json" } });
+        if (mod && mod.default && Array.isArray(mod.default.articles) && mod.default.articles.length) {
+          merged = mod.default.articles;
+          added = merged.length;
+        }
+      } catch {}
+    }
     const out = { ...data, articles: merged, updatedAt: new Date().toISOString() };
     await store.setJSON("articles.json", out);
 

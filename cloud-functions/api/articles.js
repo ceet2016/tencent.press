@@ -9,10 +9,15 @@ const STORE = process.env.BLOB_STORE || "tencent-press-data";
 export async function onRequest() {
   try {
     const store = getStore(STORE);
-    const data = await store.get("articles.json", { type: "json", consistency: "strong" });
-    // 关键修正：站点内容以 Blob 中的定时抓取结果为准。Blob 为空（用户已删除 / 尚未回填）
-    // 时直接返回空数组 —— 不再回落构建期基线，否则即便删除 Blob 也会回显"其他/旧"数据。
-    if (!data || !Array.isArray(data.articles)) {
+    let data = await store.get("articles.json", { type: "json", consistency: "strong" });
+    // 自愈：Blob 为空（部署后未回填 / 定时任务偶发失败）→ 回落内置基线，保证站点不空白
+    if (!data || !Array.isArray(data.articles) || data.articles.length === 0) {
+      try {
+        const mod = await import("../../data/articles.json", { with: { type: "json" } });
+        if (mod && mod.default && Array.isArray(mod.default.articles) && mod.default.articles.length) data = mod.default;
+      } catch {}
+    }
+    if (!data) {
       return new Response(JSON.stringify({ site: {}, categories: [], articles: [] }), {
         headers: { "Content-Type": "application/json" },
       });

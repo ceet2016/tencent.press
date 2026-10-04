@@ -231,9 +231,12 @@ function feedSkeleton() {
 // 首屏头条占位：与 assets/js/main.js 的骨架一致，避免构建期基线头条先绘制再被
 // /api/articles 实时数据替换而产生闪现；真实头条在接口就绪后由 renderHero() 重绘。
 function heroSkeleton() {
+  // 用 <a class="lead lead-skeleton"> 占位（而非 <div> + 内联样式）：
+  // renderHero() 复用同一元素并移除 lead-skeleton 类，既保证头条可点击，
+  // 又避免骨架内联样式残留（display:flex 等会破坏 .lead 的 block 布局，导致封面塌缩成窄条）。
   return `<section class="hero">
   <div class="container hero-grid">
-    <div class="lead" style="display:flex;align-items:center;justify-content:center;min-height:300px;border-radius:16px;background:linear-gradient(135deg,#eef2ff,#f5f3ff);color:#9aa3b2;font-size:16px;font-weight:600">⏳ 正在加载最新头条…</div>
+    <a class="lead lead-skeleton" href="index.html">⏳ 正在加载最新头条…</a>
     <aside class="side">
       <div class="side-head">今日要闻</div>
       <ul class="side-list"><li style="color:#9aa3b2;padding:14px 0">⏳ 正在加载…</li></ul>

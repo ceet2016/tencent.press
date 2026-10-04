@@ -190,6 +190,7 @@
     if (!f) return;
 
     if (heroLead) {
+      heroLead.classList.remove("lead-skeleton"); // 去除骨架占位样式，恢复真实头条卡片布局（封面铺满/文字在下）
       var img = f.coverImage || catCoverImg(f.category);
       var src = img ? ((/^https?:\/\//i.test(img) ? img : (PREFIX + img))) : "";
       var imgTag = src ? '<img class="cover-img" src="' + esc(src) + '" alt="' + esc(f.title) + '" loading="lazy">' : "";

@@ -96,6 +96,8 @@ img { max-width: 100%; display: block; }
 .hero-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 24px; }
 .lead { display: block; background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius); overflow: hidden; transition: transform .25s, box-shadow .25s, border-color .25s; backdrop-filter: blur(6px); }
 .lead:hover { transform: translateY(-4px); box-shadow: var(--c-glow); border-color: var(--c-border-strong); }
+/* 头条骨架占位（构建期静态 HTML 用；renderHero 就绪后移除 lead-skeleton 恢复真实卡片布局） */
+.lead.lead-skeleton { display: flex; align-items: center; justify-content: center; min-height: 320px; background: linear-gradient(135deg, #eef2ff, #f5f3ff); color: var(--c-mute); font-weight: 600; font-size: 16px; }
 .lead-cover { position: relative; height: 320px; display: grid; place-items: center; color: #fff; overflow: hidden; }
 .lead-cover .cat-badge {
   position: absolute; top: 14px; left: 14px; background: rgba(7,11,22,.55); backdrop-filter: blur(6px);
