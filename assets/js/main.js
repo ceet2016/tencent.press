@@ -217,7 +217,7 @@
       }).join("");
     }
   }
-  renderHero();   // 首屏用基线渲染一次（与静态内容一致，接口异常时也不会空白）
+  renderHero();   // 首屏静态已是骨架占位；ARTICLES 为空时本调用直接返回，接口就绪后由 refreshFromApi 重绘
 
   /* ---- 详情页：阅读进度条 + 回到顶部 ---- */
   var progress = document.getElementById("read-progress");
@@ -246,22 +246,42 @@
 
   /* ---- 移动端导航开关由下方独立 IIFE 统一处理（避免重复绑定导致 toggle 互相抵消） ---- */
 
-  /* ---- 实时数据：拉取 /api/articles，使定时抓取结果即时体现 ---- */
+  /* ---- 热榜：仅由实时抓取数据驱动，避免任何构建期基线混入 ---- */
+  var hotListEl = document.querySelector(".hot-list");
+  function renderHot() {
+    if (!hotListEl) return; // 非首页/分类页无热榜容器
+    if (!ARTICLES || !ARTICLES.length) {
+      hotListEl.innerHTML = '<li class="hot-item" style="color:#9aa3b2;padding:10px 0">暂无资讯</li>';
+      return;
+    }
+    var sorted = ARTICLES.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+    hotListEl.innerHTML = sorted.slice(0, 10).map(function (a, i) {
+      var href = a.hasPage
+        ? (PREFIX + "article/" + a.id + ".html")
+        : (PREFIX + "article.html?id=" + encodeURIComponent(a.id));
+      return '<li class="hot-item"><span class="hot-num">' + (i + 1) + '</span><a href="' + href + '">' + esc(a.title) + '</a></li>';
+    }).join("");
+  }
+
+  /* ---- 实时数据：拉取 /api/articles，使定时抓取结果即时体现（唯一数据来源）---- */
   function refreshFromApi() {
-    if (typeof fetch !== "function") { setupFeed(); return; }
+    if (typeof fetch !== "function") { setupFeed(); renderHot(); return; }
     fetch("/api/articles")
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
-        if (!d || !Array.isArray(d.articles)) { setupFeed(); return; }
-        var map = {};
-        ARTICLES.forEach(function (a) { map[a.id] = a; });
-        d.articles.forEach(function (a) { if (!map[a.id]) { map[a.id] = a; } });
-        ARTICLES = Object.keys(map).map(function (k) { return map[k]; });
-        setupFeed();   // API 就绪后一次性按日期排序绘制，杜绝基线先显、抓取后插的闪现/重排
+        // 仅以 Blob 中的抓取数据为准：构建期基线不注入，删除 Blob 即彻底无"其他/旧"数据
+        if (!d || !Array.isArray(d.articles)) { setupFeed(); renderHot(); return; }
+        ARTICLES = d.articles;
+        setupFeed();          // 一次性按日期排序绘制，杜绝基线先显、抓取后插的闪现/重排
         renderRelated();
-        renderHero();  // 头条区同步刷新为全站最新（含定时抓取的文章）
+        renderHero();         // 头条区同步刷新为全站最新（含定时抓取的文章）
+        renderHot();          // 热榜同步刷新为抓取数据榜
+        if (!ARTICLES.length) {
+          // 真实无数据（Blob 已删且定时任务尚未回填）：骨架改为明确空状态，避免长期"加载中"
+          if (heroLead) heroLead.innerHTML = '<div style="padding:48px;text-align:center;color:#9aa3b2;font-weight:600">🗞️ 暂无最新资讯，每日定时抓取后将自动更新</div>';
+        }
       })
-      .catch(function () { setupFeed(); }); // 接口异常时回落静态基线，保证页面有内容
+      .catch(function () { setupFeed(); renderHot(); });
   }
   refreshFromApi();
 })();

@@ -88,10 +88,11 @@ function footer(pagePrefix) {
 }
 
 function dataScript() {
-  // hasPage: 标记该文章有对应的静态详情页（article/<id>.html）。
-  // 由定时抓取写入 Blob 的文章（id 以 auto- 开头）没有静态页，前端据此改跳原文。
-  const arts = ARTICLES.map((a) => ({ ...a, hasPage: true }));
-  return `<script>window.__ARTICLES__=${safeJSON(arts)};window.__CATEGORIES__=${safeJSON(
+  // 关键修正：站点所有可见资讯（信息流 / 头条 / 热榜 / 相关）一律以 Blob 中的
+  // 定时抓取结果为准，构建期基线（data/articles.json 的示例稿）不再注入前端。
+  // 否则即便删除 Blob，前端仍会回显"其他/旧"数据并产生闪现。这里只注入分类结构，
+  // 文章数组留空，待 /api/articles 就绪后由 main.js 填充（单一数据源，杜绝基线泄漏）。
+  return `<script>window.__ARTICLES__=[];window.__CATEGORIES__=${safeJSON(
     CATEGORIES
   )};</script>`;
 }
@@ -227,6 +228,27 @@ function feedSkeleton() {
   return `<div class="empty" style="grid-column:1/-1"><div class="big">⏳</div>正在加载最新资讯…</div>`;
 }
 
+// 首屏头条占位：与 assets/js/main.js 的骨架一致，避免构建期基线头条先绘制再被
+// /api/articles 实时数据替换而产生闪现；真实头条在接口就绪后由 renderHero() 重绘。
+function heroSkeleton() {
+  return `<section class="hero">
+  <div class="container hero-grid">
+    <div class="lead" style="display:flex;align-items:center;justify-content:center;min-height:300px;border-radius:16px;background:linear-gradient(135deg,#eef2ff,#f5f3ff);color:#9aa3b2;font-size:16px;font-weight:600">⏳ 正在加载最新头条…</div>
+    <aside class="side">
+      <div class="side-head">今日要闻</div>
+      <ul class="side-list"><li style="color:#9aa3b2;padding:14px 0">⏳ 正在加载…</li></ul>
+    </aside>
+  </div></section>`;
+}
+
+// 热榜占位：真实榜单在 /api/articles 就绪后由 main.js renderHot() 填充（仅含抓取数据）。
+function hotPanelSkeleton(pagePrefix) {
+  return `<div class="panel">
+    <div class="section-head"><span>热榜 TOP</span><a href="${pagePrefix}index.html">更多</a></div>
+    <ol class="hot-list"><li class="hot-item" style="color:#9aa3b2;padding:10px 0">⏳ 加载中…</li></ol>
+  </div>`;
+}
+
 /* ---------- 侧栏模块（热榜 / 分类导航） ---------- */
 function hotPanel(list, pagePrefix) {
   const items = list
@@ -253,32 +275,9 @@ function buildIndex() {
   const featured = sorted[0];
   const sideList = sorted.slice(1, 7);
 
-  const hero = `<section class="hero">
-  <div class="container hero-grid">
-    <a class="lead" href="article/${featured.id}.html">
-      <div class="lead-cover" style="background:linear-gradient(135deg,#22d3ee,#4f7cff 55%,#a855f7)">
-        <img class="cover-img" src="${featured.coverImage || catCover(featured.category) || ""}" alt="${esc(featured.title)}" loading="lazy">
-        <span class="cat-badge">${catLabel(featured.category)}</span>
-        <span class="lead-mark">${coverIcon(featured.category)}</span>
-      </div>
-      <div class="lead-body">
-        <span class="cat-tag">${catLabel(featured.category)} · ${fmtDate(featured.date)}</span>
-        <h2>${featured.title}</h2>
-        <p>${featured.summary}</p>
-        <span class="read">阅读全文 →</span>
-      </div>
-    </a>
-    <aside class="side">
-      <div class="side-head">今日要闻</div>
-      <ul class="side-list">
-        ${sideList.map((a, i) => `<li><a href="article/${a.id}.html">
-          <span class="n">${i + 1}</span>
-          <div><b>${esc(a.title)}</b><em>${fmtDate(a.date)} · ${catLabel(a.category)}</em></div>
-        </a></li>`).join("")}
-      </ul>
-    </aside>
-  </div>
-</section>`;
+  // 头条区改为骨架占位：真实内容由 main.js 在 /api/articles 就绪后重绘，
+  // 从源头消除构建期基线头条先显、抓取数据后插的闪现。
+  const hero = heroSkeleton();
 
   const chips = `<button class="chip active" data-cat="">全部</button>` +
     CATEGORIES.map((c) => `<button class="chip" data-cat="${c.key}">${c.label}</button>`).join("");
@@ -290,7 +289,7 @@ function buildIndex() {
       <div class="feed-sentinel" id="feed-sentinel"></div>
     </div>
     <aside class="col-side">
-      ${hotPanel(sorted.slice(0, 10), "")}
+      ${hotPanelSkeleton("")}
       ${catNavPanel("", "")}
     </aside>
   </section>`;
@@ -325,7 +324,7 @@ function buildCategories() {
     <div class="feed-sentinel" id="feed-sentinel"></div>
   </div>
   <aside class="col-side">
-    ${hotPanel(list.slice(0, 10), "../")}
+    ${hotPanelSkeleton("../")}
     ${catNavPanel(c.key, "../")}
   </aside>
 </section>`;
@@ -451,9 +450,8 @@ function buildSitemap() {
   CATEGORIES.forEach((c) =>
     urls.push({ loc: `${SITE.baseUrl}/category/${c.key}.html`, lastmod: today(), changefreq: "daily", priority: "0.8" })
   );
-  ARTICLES.forEach((a) =>
-    urls.push({ loc: `${SITE.baseUrl}/article/${a.id}.html`, lastmod: a.date, changefreq: "weekly", priority: "0.6" })
-  );
+  // 文章为定时抓取动态内容（经 /api/articles + article.html?id= 读取），不写入静态站点地图，
+  // 避免暴露构建期基线示例稿的陈旧 URL。
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls
@@ -507,7 +505,8 @@ function copyDir(src, dest) {
 console.log("▶ 生成 Tencent观象台 静态站点 → dist/");
 buildIndex();
 buildCategories();
-buildArticles();
+// 注意：不再生成构建期基线静态详情页（buildArticles）。所有文章经 /api/articles + article.html?id= 动态读取，
+// 站点内容 100% 由定时抓取驱动，杜绝"旧/其他"数据回显。
 buildArticleView();
 buildSitemap();
 buildRobots();
