@@ -1,0 +1,29 @@
+# EdgeOne Makers 自动部署（CNB 关联项目）
+# 推送 main 时，CNB 执行本流水线，通过 cnbcool/webhook 向 EO 的固定接收地址
+# POST 一次构建通知；EO 收到后自行拉取本仓库 main 分支、按控制台配置的构建命令
+# 重新构建并部署。Webhook 地址为平台固定值，不可修改。
+# 注：本项目 Provider=Cnb，不支持 `edgeone makers deploy` 直传，必须走此 Webhook 路径。
+main:
+  push:
+    - stages:
+      - name: notify
+        image: cnbcool/webhook
+        settings:
+          urls:
+            - https://api.edgeone.ai/eo/pages/hook/cnb
+          method: POST
+          content_type: application/json
+          template: |
+            {
+              "repoName": "{{ CNB_REPO_NAME }}",
+              "repoUrl": "{{ CNB_REPO_URL_HTTPS }}",
+              "branch": "{{ CNB_BRANCH }}",
+              "commit": "{{ CNB_COMMIT_SHORT }}",
+              "commitMessage": "{{ CNB_COMMIT_MESSAGE }}",
+              "committer": "{{ CNB_COMMITTER }}",
+              "event": "{{ CNB_EVENT }}",
+              "buildId": "{{ CNB_BUILD_ID }}",
+              "buildWebUrl": "{{ CNB_BUILD_WEB_URL }}",
+              "buildUser": "{{ CNB_BUILD_USER }}",
+              "pipelineName": "{{ CNB_PIPELINE_NAME }}"
+            }
